@@ -1,0 +1,13 @@
+# Java / Maven
+target/
+*.class
+*.jar
+
+# OS
+.DS_Store
+
+# Node (just in case later)
+node_modules/
+
+# Logs
+*.log

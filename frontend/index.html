@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Protein Viewer</title>
+
+```
+<!-- 3Dmol -->
+<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+
+<style>
+    body {
+        margin: 0;
+        display: flex;
+        height: 100vh;
+        font-family: Arial, sans-serif;
+    }
+
+    #sidebar {
+        width: 300px;
+        padding: 20px;
+        background: #1e293b;
+        color: white;
+    }
+
+    #viewer {
+        flex: 1;
+        height: 100vh;
+        background: black;
+    }
+
+    input, button {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        border: none;
+    }
+
+    button {
+        background: #3b82f6;
+        color: white;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #2563eb;
+    }
+
+    #info {
+        margin-top: 15px;
+        font-size: 14px;
+    }
+</style>
+```
+
+</head>
+
+<body>
+
+<div id="sidebar">
+    <h2>Protein Viewer</h2>
+
+```
+<input id="pdbInput" value="4HHB">
+<button onclick="loadProtein()">Load Protein</button>
+
+<div id="info"></div>
+```
+
+</div>
+
+<div id="viewer"></div>
+
+<script>
+
+let viewer;
+
+window.onload = function () {
+
+    console.log("Page loaded");
+
+    // create viewer CORRECTLY
+    viewer = $3Dmol.createViewer(
+        document.getElementById("viewer"),
+        { backgroundColor: "black" }
+    );
+
+    // load default protein
+    loadProtein();
+};
+
+function loadProtein() {
+
+    const pdbId = document.getElementById("pdbInput").value;
+
+    if (!viewer) {
+        console.error("Viewer not initialized");
+        return;
+    }
+
+    viewer.clear();
+
+    $3Dmol.download("pdb:" + pdbId, viewer, {}, function () {
+
+        viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+        viewer.zoomTo();
+        viewer.render();
+    });
+
+    // OPTIONAL: fetch backend info
+    fetch(`http://localhost:8080/api/protein/${pdbId}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("info").innerHTML = `
+                <b>${data.title || pdbId}</b><br>
+                Method: ${data.method || "N/A"}<br>
+                Release: ${data.releaseDate || "N/A"}
+            `;
+        })
+        .catch(() => {
+            document.getElementById("info").innerText = "Info unavailable";
+        });
+}
+
+</script>
+
+</body>
+</html>
