@@ -1,129 +1,1008 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="en">
 <head>
-    <title>Protein Viewer</title>
-
-```
-<!-- 3Dmol -->
-<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
-
-<style>
-    body {
-        margin: 0;
-        display: flex;
-        height: 100vh;
-        font-family: Arial, sans-serif;
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ProteinViz · Molecular Explorer v2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <style>
+    :root {
+      --bg:#050609; --bg2:#090b10; --panel:#0c0e15; --panel2:#10131c;
+      --border:#1a1f2e; --border2:#232840;
+      --accent:#39ffc8; --accent2:#5b8dff; --accent3:#ff5e8a;
+      --warn:#ff6b6b; --gold:#ffd166; --purple:#b57bff;
+      --text:#dde4f0; --muted:#58637a; --muted2:#3a4258;
+      --mono:'Syne Mono',monospace; --head:'Syne',sans-serif; --body:'DM Sans',sans-serif;
     }
-
-    #sidebar {
-        width: 300px;
-        padding: 20px;
-        background: #1e293b;
-        color: white;
-    }
-
-    #viewer {
-        flex: 1;
-        height: 100vh;
-        background: black;
-    }
-
-    input, button {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 10px;
-        border-radius: 5px;
-        border: none;
-    }
-
-    button {
-        background: #3b82f6;
-        color: white;
-        cursor: pointer;
-    }
-
-    button:hover {
-        background: #2563eb;
-    }
-
-    #info {
-        margin-top: 15px;
-        font-size: 14px;
-    }
-</style>
-```
-
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--body);height:100vh;display:flex;overflow:hidden;position:relative}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(57,255,200,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(57,255,200,.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+    body::after{content:'';position:fixed;top:-30%;right:-10%;width:500px;height:500px;background:radial-gradient(circle,rgba(57,255,200,.04) 0%,transparent 60%);pointer-events:none;z-index:0}
+    #sidebar{width:300px;min-width:300px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:10}
+    #sidebar-header{padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0;position:relative;overflow:hidden}
+    #sidebar-header::before{content:'';position:absolute;top:-20px;left:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(57,255,200,.08) 0%,transparent 70%);pointer-events:none}
+    .logo-wrap{display:flex;align-items:baseline;gap:8px}
+    .logo{font-family:var(--head);font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.02em}
+    .logo em{color:var(--accent);font-style:normal}
+    .logo-tag{font-family:var(--mono);font-size:9px;color:var(--accent);border:1px solid rgba(57,255,200,.3);border-radius:3px;padding:1px 5px;letter-spacing:.05em}
+    .logo-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:.04em}
+    .tabs{display:flex;flex-shrink:0;border-bottom:1px solid var(--border);overflow-x:auto}
+    .tabs::-webkit-scrollbar{display:none}
+    .tab{flex:1;padding:8px 4px;text-align:center;font-family:var(--mono);font-size:8px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:color .15s;border-bottom:2px solid transparent;white-space:nowrap;position:relative}
+    .tab:hover{color:var(--text)} .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab .tab-dot{display:none;width:4px;height:4px;border-radius:50%;background:var(--accent3);position:absolute;top:6px;right:6px}
+    .tab .tab-dot.visible{display:inline-block}
+    .tab-panel{display:none;flex:1;overflow-y:auto;flex-direction:column}
+    .tab-panel.active{display:flex}
+    .tab-panel::-webkit-scrollbar{width:2px} .tab-panel::-webkit-scrollbar-thumb{background:var(--border2)}
+    .section+.section{border-top:1px solid var(--border)}
+    .section-label{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+    .section-label::after{content:'';display:block;height:1px;background:linear-gradient(90deg,var(--border2),transparent);margin-top:5px}
+    .pad{padding:14px 16px}
+    .search-row{display:flex;gap:6px}
+    .search-row input,.std-input{flex:1;background:var(--panel2);border:1px solid var(--border2);border-radius:5px;padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border-color .15s}
+    .search-row input:focus,.std-input:focus{border-color:var(--accent)}
+    .btn{background:var(--accent);color:#000;border:none;border-radius:5px;padding:7px 14px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:opacity .15s,transform .1s;white-space:nowrap}
+    .btn:hover{opacity:.85} .btn:active{transform:scale(.97)}
+    .btn.secondary{background:transparent;color:var(--accent2);border:1px solid var(--accent2)}
+    .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
+    .btn.ghost:hover{color:var(--text);border-color:var(--border)}
+    .btn.purple-btn{background:var(--purple);color:#000}
+    .featured-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+    .featured-chip{background:var(--panel2);border:1px solid var(--border2);border-radius:5px;padding:7px 9px;cursor:pointer;transition:border-color .15s,background .15s}
+    .featured-chip:hover{border-color:var(--accent2);background:rgba(91,141,255,.07)}
+    .fid{font-family:var(--mono);font-size:9px;color:var(--accent2);font-weight:700}
+    .ftitle{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.3}
+    #info-card .pname{font-family:var(--head);font-size:12px;font-weight:600;line-height:1.4;margin-bottom:8px}
+    .meta{display:flex;justify-content:space-between;align-items:flex-start;padding:3px 0}
+    .meta .k{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em;flex-shrink:0}
+    .meta .v{font-size:10px;color:var(--text);font-weight:500;text-align:right;max-width:170px;word-break:break-word}
+    .org-badge{display:inline-block;background:rgba(57,255,200,.08);border:1px solid rgba(57,255,200,.2);border-radius:3px;padding:2px 7px;font-family:var(--mono);font-size:8px;color:var(--accent);letter-spacing:.05em;margin-bottom:8px}
+    .authors{font-size:9px;color:var(--muted);margin-top:6px;line-height:1.5}
+    #search-results{flex:1;overflow-y:auto}
+    .result-item{padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+    .result-item:hover{background:var(--panel2)}
+    .result-id{font-family:var(--mono);font-size:10px;color:var(--accent2);font-weight:700}
+    .result-title{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.3}
+    .ppi-search-row{display:flex;gap:6px;margin-bottom:8px}
+    .ppi-config{display:flex;gap:6px;margin-bottom:8px}
+    .ppi-config select{flex:1;background:var(--panel2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:9px;padding:5px 7px;outline:none}
+    .score-range{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;color:var(--muted)}
+    .score-range input[type=range]{flex:1;accent-color:var(--accent2)}
+    .score-val{color:var(--accent2);min-width:24px;text-align:right}
+    #ppi-canvas-wrap{flex:1;min-height:0;position:relative;background:var(--bg2)}
+    #ppi-svg-mini{width:100%;height:100%}
+    #ppi-empty,#ppi-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;pointer-events:none}
+    #ppi-loading{display:none}
+    .pe-icon{font-size:28px;opacity:.2} .pe-text{font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;line-height:1.6}
+    #ppi-tooltip,#ppi-full-tooltip{position:absolute;background:var(--panel);border:1px solid var(--border2);border-radius:5px;padding:6px 10px;font-family:var(--mono);font-size:9px;pointer-events:none;opacity:0;transition:opacity .1s;z-index:10}
+    #ppi-tooltip.visible,#ppi-full-tooltip.visible{opacity:1}
+    #ppi-info-bar{display:flex;border-top:1px solid var(--border);background:var(--panel2);flex-shrink:0}
+    .ppi-stat{flex:1;padding:5px 8px;text-align:center;border-right:1px solid var(--border)}
+    .ppi-stat:last-child{border-right:none}
+    .sk{font-family:var(--mono);font-size:7px;color:var(--muted);letter-spacing:.08em}
+    .sv{font-family:var(--mono);font-size:11px;color:var(--accent2);font-weight:700}
+    #ppi-legend{display:flex;gap:8px;padding:4px 10px;flex-shrink:0}
+    .leg-item{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:8px;color:var(--muted)}
+    .leg-dot{width:6px;height:6px;border-radius:50%}
+    .style-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+    .style-btn{background:var(--panel2);border:1px solid var(--border2);color:var(--muted);border-radius:4px;padding:6px 0;font-family:var(--mono);font-size:9px;cursor:pointer;transition:all .15s}
+    .style-btn:hover{color:var(--text);border-color:var(--border)}
+    .style-btn.active{background:rgba(57,255,200,.1);border-color:var(--accent);color:var(--accent)}
+    .color-row{display:flex;gap:6px;align-items:center}
+    .color-btn{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .1s}
+    .color-btn:hover{transform:scale(1.1)} .color-btn.active{border-color:var(--text)}
+    #status-bar{padding:7px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:7px;flex-shrink:0}
+    #status-bar .dot{width:5px;height:5px;border-radius:50%;background:var(--muted);flex-shrink:0}
+    #status-bar.ok .dot{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+    #status-bar.error .dot{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+    #status-bar.loading .dot{background:var(--gold);animation:pulse 1s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    #status-text{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em}
+    #viewer-wrap{flex:1;position:relative;overflow:hidden;z-index:1}
+    #viewer{width:100%;height:100%}
+    #overlay{position:absolute;inset:0;background:rgba(5,6,9,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;backdrop-filter:blur(4px);z-index:5;transition:opacity .3s}
+    #overlay.hidden{opacity:0;pointer-events:none}
+    .ov-icon{font-size:48px;opacity:.15} .ov-text{font-family:var(--head);font-size:16px;color:var(--muted);font-weight:600}
+    .ov-hint{font-family:var(--mono);font-size:10px;color:var(--muted2)}
+    #viewer-controls{position:absolute;bottom:16px;right:16px;display:flex;gap:6px;z-index:10}
+    .icon-btn{width:32px;height:32px;background:rgba(12,14,21,.9);border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .15s,border-color .15s}
+    .icon-btn:hover{color:var(--text);border-color:var(--border)} .icon-btn.on{color:var(--accent);border-color:var(--accent)}
+    #pdb-badge{position:absolute;top:12px;left:12px;z-index:10;background:rgba(12,14,21,.88);border:1px solid var(--border2);border-radius:5px;padding:4px 10px;font-family:var(--mono);font-size:10px;color:var(--muted);opacity:0;transition:opacity .3s}
+    #pdb-badge.visible{opacity:1} .bid{color:var(--accent);font-weight:700}
+    #mutation-badge{position:absolute;top:12px;right:60px;z-index:10;background:rgba(255,94,138,.15);border:1px solid rgba(255,94,138,.4);border-radius:5px;padding:4px 10px;font-family:var(--mono);font-size:10px;color:var(--accent3);opacity:0;transition:opacity .3s;display:flex;align-items:center;gap:6px}
+    #mutation-badge.visible{opacity:1}
+    .mut-dot{width:6px;height:6px;border-radius:50%;background:var(--accent3);box-shadow:0 0 8px var(--accent3);animation:pulse 1.5s infinite}
+    .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;gap:6px;color:var(--muted);font-family:var(--mono);font-size:9px;text-align:center;line-height:1.8}
+    .es-icon{font-size:24px;opacity:.3;margin-bottom:2px}
+    .loader-ring{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite}
+    .loader-label{font-family:var(--mono);font-size:9px;color:var(--muted)}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .fade-in{animation:fadeIn .3s ease-out}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+    .ai-section{background:var(--panel2);border:1px solid var(--border2);border-radius:7px;padding:12px;margin-bottom:8px}
+    .ai-section-title{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .ai-icon{font-size:12px} .ai-text{font-size:11px;color:var(--text);line-height:1.6}
+    .disease-card{background:rgba(255,94,138,.06);border:1px solid rgba(255,94,138,.2);border-radius:5px;padding:8px;margin-bottom:5px}
+    .disease-name{font-family:var(--head);font-size:11px;font-weight:600;color:var(--accent3)}
+    .disease-role{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4}
+    .sig-badge{display:inline-block;font-family:var(--mono);font-size:7px;padding:1px 5px;border-radius:3px;margin-top:4px;letter-spacing:.05em}
+    .sig-badge.high{background:rgba(255,107,107,.2);color:var(--warn);border:1px solid rgba(255,107,107,.3)}
+    .sig-badge.medium{background:rgba(255,209,102,.15);color:var(--gold);border:1px solid rgba(255,209,102,.3)}
+    .sig-badge.low{background:rgba(57,255,200,.1);color:var(--accent);border:1px solid rgba(57,255,200,.2)}
+    .pathway-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+    .pathway-item:last-child{border-bottom:none}
+    .pathway-db{font-family:var(--mono);font-size:7px;padding:2px 5px;border-radius:3px;background:rgba(91,141,255,.15);border:1px solid rgba(91,141,255,.3);color:var(--accent2);white-space:nowrap;flex-shrink:0;margin-top:1px}
+    .pathway-name{font-size:10px;color:var(--text);font-weight:500} .pathway-role{font-size:9px;color:var(--muted);margin-top:2px}
+    .drug-card{background:rgba(181,123,255,.06);border:1px solid rgba(181,123,255,.2);border-radius:5px;padding:8px;margin-bottom:5px}
+    .drug-name{font-family:var(--head);font-size:11px;font-weight:600;color:var(--purple)}
+    .drug-status{display:inline-block;font-family:var(--mono);font-size:7px;padding:1px 5px;border-radius:3px;margin-top:3px;letter-spacing:.04em}
+    .drug-status.approved{background:rgba(57,255,200,.1);color:var(--accent);border:1px solid rgba(57,255,200,.2)}
+    .drug-status.clinical_trial{background:rgba(255,209,102,.1);color:var(--gold);border:1px solid rgba(255,209,102,.2)}
+    .drug-status.experimental{background:rgba(91,141,255,.1);color:var(--accent2);border:1px solid rgba(91,141,255,.2)}
+    .drug-mechanism{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.4}
+    .confidence-bar{height:3px;background:var(--border2);border-radius:2px;margin-top:6px;overflow:hidden}
+    .confidence-fill{height:100%;border-radius:2px;transition:width .5s ease-out}
+    .confidence-fill.high{background:var(--accent);width:90%}
+    .confidence-fill.medium{background:var(--gold);width:55%}
+    .confidence-fill.low{background:var(--warn);width:25%}
+    .api-key-box{background:rgba(255,209,102,.06);border:1px solid rgba(255,209,102,.2);border-radius:6px;padding:10px;margin-bottom:10px}
+    .api-key-box input{width:100%;background:var(--panel);border:1px solid var(--border2);border-radius:4px;padding:6px 8px;color:var(--text);font-family:var(--mono);font-size:10px;outline:none;margin-top:5px}
+    .api-key-box input:focus{border-color:var(--gold)}
+    .mut-input-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+    .mut-field{display:flex;flex-direction:column;gap:4px}
+    .mut-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+    .mut-input{background:var(--panel2);border:1px solid var(--border2);border-radius:5px;padding:6px 9px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border-color .15s;width:100%}
+    .mut-input:focus{border-color:var(--accent)}
+    .aa-picker{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:4px}
+    .aa-btn{background:var(--panel2);border:1px solid var(--border2);border-radius:3px;padding:3px 0;text-align:center;font-family:var(--mono);font-size:8px;color:var(--muted);cursor:pointer;transition:all .12s}
+    .aa-btn:hover{color:var(--text);border-color:var(--border)}
+    .aa-btn.selected-wt{background:rgba(57,255,200,.1);border-color:var(--accent);color:var(--accent)}
+    .aa-btn.selected-mt{background:rgba(255,94,138,.1);border-color:var(--accent3);color:var(--accent3)}
+    .mut-comparison{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:8px}
+    .mut-aa-card{background:var(--panel2);border-radius:7px;padding:10px;border:1px solid var(--border2)}
+    .mut-aa-card.wt-card{border-color:rgba(57,255,200,.3);background:rgba(57,255,200,.04)}
+    .mut-aa-card.mt-card{border-color:rgba(255,94,138,.3);background:rgba(255,94,138,.04)}
+    .mut-aa-label{font-family:var(--mono);font-size:7px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+    .mut-aa-code{font-family:var(--head);font-size:22px;font-weight:800;margin:4px 0}
+    .mut-aa-card.wt-card .mut-aa-code{color:var(--accent)}
+    .mut-aa-card.mt-card .mut-aa-code{color:var(--accent3)}
+    .mut-aa-name{font-size:9px;color:var(--muted)} .mut-arrow{font-size:18px;color:var(--muted2);text-align:center}
+    .mut-notation{font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;margin-top:3px}
+    .prop-change-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:9px}
+    .prop-change-row:last-child{border-bottom:none}
+    .prop-name{color:var(--muted);width:80px;flex-shrink:0} .prop-from{color:var(--accent)} .prop-arr{color:var(--muted2)} .prop-to{color:var(--accent3)}
+    .severity-meter{height:4px;background:var(--border2);border-radius:2px;overflow:hidden;margin:8px 0}
+    .severity-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--gold),var(--warn));transition:width .6s ease-out}
+    .severity-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:7px;color:var(--muted2)}
+    .effect-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:4px;font-weight:700;letter-spacing:.04em}
+    .effect-badge.benign,.effect-badge.likely_benign{background:rgba(57,255,200,.1);color:var(--accent);border:1px solid rgba(57,255,200,.3)}
+    .effect-badge.uncertain{background:rgba(255,209,102,.1);color:var(--gold);border:1px solid rgba(255,209,102,.3)}
+    .effect-badge.likely_pathogenic,.effect-badge.pathogenic{background:rgba(255,107,107,.1);color:var(--warn);border:1px solid rgba(255,107,107,.3)}
+    .blosum-chip{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:8px;padding:2px 7px;border-radius:3px;border:1px solid var(--border2);background:var(--panel2);color:var(--muted)}
+    .bv.pos{color:var(--accent)} .bv.neg{color:var(--warn)} .bv.zero{color:var(--gold)}
+    #ppi-full-panel{display:none;flex-direction:column;position:fixed;inset:0;z-index:100;background:var(--bg)}
+    #ppi-full-panel.active{display:flex}
+    #ppi-full-header{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0;gap:10px}
+    .ppi-full-title{font-family:var(--head);font-size:14px;font-weight:700}
+    .ppi-full-title em{color:var(--accent);font-style:normal}
+    .ppi-full-subtitle{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px}
+    .ppi-badge{background:rgba(91,141,255,.15);border:1px solid rgba(91,141,255,.3);border-radius:4px;padding:2px 8px;font-family:var(--mono);font-size:9px;color:var(--accent2)}
+    #ppi-full-canvas{flex:1;position:relative;overflow:hidden}
+    #ppi-svg-full{width:100%;height:100%}
+    #ppi-full-controls{position:absolute;top:12px;right:12px;display:flex;gap:6px}
+    #ppi-full-stats{position:absolute;bottom:16px;right:16px;display:flex;gap:8px}
+    .stat-item{background:rgba(12,14,21,.88);border:1px solid var(--border2);border-radius:6px;padding:6px 12px;text-align:center}
+    .stat-val{font-family:var(--head);font-size:16px;font-weight:800;color:var(--accent2)}
+    .stat-label{font-family:var(--mono);font-size:7px;color:var(--muted);margin-top:2px;letter-spacing:.06em}
+    #ppi-full-legend{position:absolute;bottom:16px;left:16px;background:rgba(12,14,21,.88);border:1px solid var(--border2);border-radius:6px;padding:10px 14px}
+    .full-leg-title{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.08em;margin-bottom:8px;text-transform:uppercase}
+    .full-leg-item{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9px;color:var(--text);margin-bottom:4px}
+    .full-leg-line{width:20px;border-radius:2px}
+  </style>
 </head>
-
 <body>
 
 <div id="sidebar">
-    <h2>Protein Viewer</h2>
+  <div id="sidebar-header">
+    <div class="logo-wrap">
+      <div class="logo">Protein<em>Viz</em></div>
+      <span class="logo-tag">v2</span>
+    </div>
+    <div class="logo-sub">Molecular Structure Explorer · AI-Powered</div>
+  </div>
 
-```
-<input id="pdbInput" value="4HHB">
-<button onclick="loadProtein()">Load Protein</button>
+  <div class="tabs">
+    <div class="tab active" data-tab="explore">Explore</div>
+    <div class="tab" data-tab="search">Search</div>
+    <div class="tab" data-tab="ppi">PPI<span class="tab-dot" id="ppi-tab-dot"></span></div>
+    <div class="tab" data-tab="ai">AI<span class="tab-dot" id="ai-tab-dot"></span></div>
+    <div class="tab" data-tab="mutation">Mutate</div>
+    <div class="tab" data-tab="style">Style</div>
+  </div>
 
-<div id="info"></div>
-```
+  <!-- EXPLORE -->
+  <div class="tab-panel active" id="tab-explore">
+    <div class="pad section">
+      <div class="section-label">Load Structure</div>
+      <div class="search-row">
+        <input type="text" id="pdbInput" value="4HHB" maxlength="8" placeholder="e.g. 1CRN"/>
+        <button class="btn" onclick="loadProtein()">Load</button>
+      </div>
+    </div>
+    <div class="pad section">
+      <div class="section-label">Featured</div>
+      <div class="featured-grid" id="featured-grid"></div>
+    </div>
+    <div class="pad section" style="flex:1">
+      <div class="section-label">Metadata</div>
+      <div id="info-card"><div style="color:var(--muted);font-size:11px;font-family:var(--mono)">— load a structure —</div></div>
+    </div>
+  </div>
 
+  <!-- SEARCH -->
+  <div class="tab-panel" id="tab-search" style="flex-direction:column">
+    <div class="pad section" style="flex-shrink:0">
+      <div class="section-label">Search RCSB PDB</div>
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="hemoglobin, kinase, p53…"/>
+        <button class="btn" onclick="doSearch()">Go</button>
+      </div>
+    </div>
+    <div id="search-results">
+      <div class="empty-state"><div class="es-icon">🔍</div>search by protein name<br>or keyword above</div>
+    </div>
+  </div>
+
+  <!-- PPI -->
+  <div class="tab-panel" id="tab-ppi" style="flex-direction:column;overflow:hidden">
+    <div class="pad section" style="flex-shrink:0">
+      <div class="section-label">Interaction Network</div>
+      <div class="ppi-search-row">
+        <input type="text" id="ppiGeneInput" value="TP53" maxlength="20" placeholder="gene symbol e.g. BRCA1"/>
+        <button class="btn" onclick="loadPPI()">Map</button>
+      </div>
+      <div class="ppi-config">
+        <select id="ppiOrganism">
+          <option value="9606">Human</option><option value="10090">Mouse</option>
+          <option value="7227">Fly</option><option value="6239">C. elegans</option><option value="4932">Yeast</option>
+        </select>
+        <select id="ppiLimit">
+          <option value="10">10 nodes</option><option value="20" selected>20 nodes</option><option value="50">50 nodes</option>
+        </select>
+      </div>
+      <div class="score-range">
+        <label>Score ≥</label>
+        <input type="range" id="ppiScore" min="0" max="1000" value="400" step="50" oninput="document.getElementById('scoreVal').textContent=this.value"/>
+        <span class="score-val" id="scoreVal">400</span>
+      </div>
+    </div>
+    <div id="ppi-canvas-wrap" style="flex:1;min-height:0">
+      <svg id="ppi-svg-mini"></svg>
+      <div id="ppi-empty"><div class="pe-icon">⬡</div><div class="pe-text">enter a gene symbol<br>and click Map</div></div>
+      <div id="ppi-loading"><div class="loader-ring"></div><div class="loader-label">fetching interactions…</div></div>
+      <div id="ppi-tooltip"></div>
+    </div>
+    <div id="ppi-info-bar" style="display:none">
+      <div class="ppi-stat"><span class="sk">NODES</span> <span class="sv" id="ppi-node-count">0</span></div>
+      <div class="ppi-stat"><span class="sk">EDGES</span> <span class="sv" id="ppi-edge-count">0</span></div>
+      <div class="ppi-stat"><span class="sk">GENE</span> <span class="sv" id="ppi-gene-name">—</span></div>
+    </div>
+    <div id="ppi-legend" style="display:none">
+      <div class="leg-item"><div class="leg-dot" style="background:var(--accent3)"></div>Query</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--accent2)"></div>High conf</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--muted)"></div>Low conf</div>
+    </div>
+    <div style="padding:0 10px 10px;flex-shrink:0">
+      <button class="btn secondary" style="width:100%;font-size:9px" onclick="expandPPI()">⤢ Expand to Full View</button>
+    </div>
+  </div>
+
+  <!-- AI SUMMARY -->
+  <div class="tab-panel" id="tab-ai" style="flex-direction:column">
+    <div class="pad section" style="flex-shrink:0">
+      <div class="section-label">AI Protein Summary</div>
+      <div class="api-key-box">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--gold);letter-spacing:.05em">ANTHROPIC API KEY</div>
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" oninput="saveApiKey(this.value)"/>
+        <div style="font-family:var(--mono);font-size:7px;color:var(--muted2);margin-top:4px">Stored in session only · never sent to any server except Anthropic</div>
+      </div>
+      <div class="search-row" style="margin-bottom:4px">
+        <input type="text" id="aiPdbInput" placeholder="PDB ID (uses current if empty)" class="std-input"/>
+        <button class="btn purple-btn" onclick="loadAiSummary()">Analyze</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:7px;color:var(--muted2)">Claude AI · function · diseases · pathways · drug targets</div>
+    </div>
+    <div id="ai-result" style="flex:1;overflow-y:auto;padding:0 16px 16px">
+      <div class="empty-state" style="margin-top:8px"><div class="es-icon">🧬</div>paste your Anthropic API key<br>then click Analyze</div>
+    </div>
+  </div>
+
+  <!-- MUTATION -->
+  <div class="tab-panel" id="tab-mutation" style="flex-direction:column">
+    <div class="pad section" style="flex-shrink:0">
+      <div class="section-label">Mutation Analyzer</div>
+      <div class="mut-input-grid">
+        <div class="mut-field"><span class="mut-label">Wild-Type AA</span>
+          <input type="text" id="mutWt" class="mut-input" maxlength="1" placeholder="V" oninput="this.value=this.value.toUpperCase();syncAaPicker('wt',this.value)"/></div>
+        <div class="mut-field"><span class="mut-label">Mutant AA</span>
+          <input type="text" id="mutMt" class="mut-input" maxlength="1" placeholder="E" oninput="this.value=this.value.toUpperCase();syncAaPicker('mt',this.value)"/></div>
+        <div class="mut-field"><span class="mut-label">Position</span>
+          <input type="number" id="mutPos" class="mut-input" placeholder="6" min="1" max="9999"/></div>
+        <div class="mut-field"><span class="mut-label">Chain</span>
+          <input type="text" id="mutChain" class="mut-input" maxlength="1" placeholder="A" oninput="this.value=this.value.toUpperCase()"/></div>
+      </div>
+      <div style="margin-bottom:8px">
+        <div class="mut-label" style="margin-bottom:4px">Wild-Type →</div>
+        <div class="aa-picker" id="aa-picker-wt"></div>
+        <div class="mut-label" style="margin:6px 0 4px">Mutant →</div>
+        <div class="aa-picker" id="aa-picker-mt"></div>
+      </div>
+      <button class="btn" style="width:100%;background:linear-gradient(135deg,var(--accent3),var(--purple))" onclick="analyzeMutation()">Analyze Mutation</button>
+      <div style="font-family:var(--mono);font-size:7px;color:var(--muted2);margin-top:4px">Highlights residue in 3D · AI effect prediction (optional)</div>
+    </div>
+    <div id="mutation-result" style="flex:1;overflow-y:auto;padding:0 16px 16px">
+      <div class="empty-state"><div class="es-icon">⚡</div>enter mutation details<br>and click Analyze</div>
+    </div>
+  </div>
+
+  <!-- STYLE -->
+  <div class="tab-panel" id="tab-style">
+    <div class="pad section">
+      <div class="section-label">Representation</div>
+      <div class="style-grid">
+        <button class="style-btn active" onclick="setStyle('cartoon',this)">Cartoon</button>
+        <button class="style-btn" onclick="setStyle('stick',this)">Stick</button>
+        <button class="style-btn" onclick="setStyle('sphere',this)">Sphere</button>
+        <button class="style-btn" onclick="setStyle('surface',this)">Surface</button>
+        <button class="style-btn" onclick="setStyle('line',this)">Line</button>
+        <button class="style-btn" onclick="setStyle('cross',this)">Cross</button>
+      </div>
+    </div>
+    <div class="pad section">
+      <div class="section-label">Color Scheme</div>
+      <div class="color-row">
+        <div class="color-btn active" style="background:linear-gradient(90deg,#6366f1,#06b6d4,#22c55e,#eab308,#ef4444)" title="Spectrum" onclick="setColor('spectrum',this)"></div>
+        <div class="color-btn" style="background:linear-gradient(90deg,#3b82f6,#1d4ed8)" title="Chain" onclick="setColor('chain',this)"></div>
+        <div class="color-btn" style="background:linear-gradient(90deg,#ef4444,#f97316,#22c55e,#8b5cf6)" title="Residue" onclick="setColor('residue',this)"></div>
+        <div class="color-btn" style="background:#39ffc8" title="Teal" onclick="setColor('#39ffc8',this)"></div>
+        <div class="color-btn" style="background:#e2e8f0;border:1px solid #333" title="White" onclick="setColor('white',this)"></div>
+      </div>
+    </div>
+    <div class="pad section">
+      <div class="section-label">Background</div>
+      <div style="display:flex;gap:5px">
+        <button class="btn ghost" style="flex:1;font-size:9px" onclick="setBg('black')">Dark</button>
+        <button class="btn ghost" style="flex:1;font-size:9px" onclick="setBg('#0a1628')">Navy</button>
+        <button class="btn ghost" style="flex:1;font-size:9px" onclick="setBg('white')">Light</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="status-bar"><div class="dot"></div><span id="status-text">ready</span></div>
 </div>
 
-<div id="viewer"></div>
+<!-- 3D VIEWER -->
+<div id="viewer-wrap">
+  <div id="viewer"></div>
+  <div id="overlay">
+    <div class="ov-icon">⬡</div>
+    <div class="ov-text">enter a PDB ID and click load</div>
+    <div class="ov-hint">or pick a featured structure</div>
+  </div>
+  <div id="viewer-controls">
+    <button class="icon-btn" title="Reset view" onclick="resetView()">⊙</button>
+    <button class="icon-btn" id="spin-btn" title="Toggle spin" onclick="toggleSpin()">↻</button>
+    <button class="icon-btn" title="Screenshot" onclick="takeScreenshot()">⬛</button>
+  </div>
+  <div id="pdb-badge"><span class="bid" id="badge-id"></span> · <span id="badge-title"></span></div>
+  <div id="mutation-badge">
+    <div class="mut-dot"></div>
+    <span id="mutation-badge-text">—</span>
+    <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:10px;margin-left:4px" onclick="clearMutationHighlight()">✕</button>
+  </div>
+</div>
+
+<!-- PPI FULL PANEL -->
+<div id="ppi-full-panel">
+  <div id="ppi-full-header">
+    <div>
+      <div class="ppi-full-title">Protein–Protein Interactions: <em id="ppi-full-gene">—</em></div>
+      <div class="ppi-full-subtitle">STRING Database</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <span class="ppi-badge" id="ppi-full-badge">0 nodes</span>
+      <button class="icon-btn" onclick="closePPI()" style="width:auto;padding:0 10px;font-family:var(--mono);font-size:9px">✕ Close</button>
+    </div>
+  </div>
+  <div id="ppi-full-canvas">
+    <svg id="ppi-svg-full"></svg>
+    <div id="ppi-full-tooltip"></div>
+    <div id="ppi-full-controls">
+      <button class="icon-btn" onclick="resetFullLayout()">⊙</button>
+      <button class="icon-btn" onclick="toggleLabels()" id="label-btn">Aa</button>
+      <button class="icon-btn" onclick="ppiScreenshot()">⬛</button>
+    </div>
+    <div id="ppi-full-stats">
+      <div class="stat-item"><div class="stat-val" id="full-node-count">0</div><div class="stat-label">Proteins</div></div>
+      <div class="stat-item"><div class="stat-val" id="full-edge-count">0</div><div class="stat-label">Edges</div></div>
+      <div class="stat-item"><div class="stat-val" id="full-avg-score">—</div><div class="stat-label">Avg Score</div></div>
+    </div>
+    <div id="ppi-full-legend">
+      <div class="full-leg-title">Edge Confidence</div>
+      <div class="full-leg-item"><div class="full-leg-line" style="background:var(--accent);height:3px"></div>High (≥ 700)</div>
+      <div class="full-leg-item"><div class="full-leg-line" style="background:var(--accent2);height:2px"></div>Medium (400–699)</div>
+      <div class="full-leg-item"><div class="full-leg-line" style="background:var(--muted2);height:1px"></div>Low (&lt; 400)</div>
+    </div>
+  </div>
+</div>
 
 <script>
+// ═══ STATE ═══════════════════════════════════════════════════════════
+let viewer=null,currentStyle='cartoon',currentColor='spectrum';
+let spinning=false,currentPdb='',ppiData=null,showLabels=true,fullSimulation=null,currentMutation=null;
 
-let viewer;
-
-window.onload = function () {
-
-    console.log("Page loaded");
-
-    // create viewer CORRECTLY
-    viewer = $3Dmol.createViewer(
-        document.getElementById("viewer"),
-        { backgroundColor: "black" }
-    );
-
-    // load default protein
-    loadProtein();
+const AA_LIST=['A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','V','W','Y'];
+const AA_NAMES={A:'Alanine',R:'Arginine',N:'Asparagine',D:'Aspartate',C:'Cysteine',Q:'Glutamine',
+  E:'Glutamate',G:'Glycine',H:'Histidine',I:'Isoleucine',L:'Leucine',K:'Lysine',M:'Methionine',
+  F:'Phenylalanine',P:'Proline',S:'Serine',T:'Threonine',W:'Tryptophan',Y:'Tyrosine',V:'Valine'};
+const AA_PROPS={
+  A:{charge:'neutral',polarity:'nonpolar',size:'small',hydrophobicity:'hydrophobic'},
+  R:{charge:'positive',polarity:'polar',size:'large',hydrophobicity:'hydrophilic'},
+  N:{charge:'neutral',polarity:'polar',size:'medium',hydrophobicity:'hydrophilic'},
+  D:{charge:'negative',polarity:'polar',size:'small',hydrophobicity:'hydrophilic'},
+  C:{charge:'neutral',polarity:'polar',size:'small',hydrophobicity:'hydrophobic'},
+  Q:{charge:'neutral',polarity:'polar',size:'medium',hydrophobicity:'hydrophilic'},
+  E:{charge:'negative',polarity:'polar',size:'medium',hydrophobicity:'hydrophilic'},
+  G:{charge:'neutral',polarity:'nonpolar',size:'tiny',hydrophobicity:'hydrophobic'},
+  H:{charge:'positive',polarity:'polar',size:'medium',hydrophobicity:'hydrophilic'},
+  I:{charge:'neutral',polarity:'nonpolar',size:'large',hydrophobicity:'hydrophobic'},
+  L:{charge:'neutral',polarity:'nonpolar',size:'large',hydrophobicity:'hydrophobic'},
+  K:{charge:'positive',polarity:'polar',size:'large',hydrophobicity:'hydrophilic'},
+  M:{charge:'neutral',polarity:'nonpolar',size:'large',hydrophobicity:'hydrophobic'},
+  F:{charge:'neutral',polarity:'nonpolar',size:'large',hydrophobicity:'hydrophobic'},
+  P:{charge:'neutral',polarity:'nonpolar',size:'small',hydrophobicity:'hydrophobic'},
+  S:{charge:'neutral',polarity:'polar',size:'small',hydrophobicity:'hydrophilic'},
+  T:{charge:'neutral',polarity:'polar',size:'small',hydrophobicity:'hydrophilic'},
+  W:{charge:'neutral',polarity:'nonpolar',size:'large',hydrophobicity:'hydrophobic'},
+  Y:{charge:'neutral',polarity:'polar',size:'large',hydrophobicity:'hydrophobic'},
+  V:{charge:'neutral',polarity:'nonpolar',size:'medium',hydrophobicity:'hydrophobic'}
 };
 
-function loadProtein() {
-
-    const pdbId = document.getElementById("pdbInput").value;
-
-    if (!viewer) {
-        console.error("Viewer not initialized");
-        return;
-    }
-
-    viewer.clear();
-
-    $3Dmol.download("pdb:" + pdbId, viewer, {}, function () {
-
-        viewer.setStyle({}, { cartoon: { color: "spectrum" } });
-        viewer.zoomTo();
-        viewer.render();
+// ═══ INIT ════════════════════════════════════════════════════════════
+window.onload=function(){
+  viewer=$3Dmol.createViewer(document.getElementById('viewer'),{backgroundColor:'black',antialias:true});
+  renderFeatured([
+    {pdbId:'4HHB',title:'Deoxyhemoglobin'},{pdbId:'1CRN',title:'Crambin'},
+    {pdbId:'6LU7',title:'SARS-CoV-2 Protease'},{pdbId:'1AKE',title:'Adenylate Kinase'},
+    {pdbId:'2HHB',title:'Oxyhemoglobin'},{pdbId:'1TIM',title:'Triosephosphate Isomerase'},
+    {pdbId:'3J3Q',title:'80S Ribosome'},{pdbId:'1BNA',title:'B-DNA Dodecamer'}
+  ]);
+  loadProtein();
+  buildAaPickers();
+  const saved=sessionStorage.getItem('anthropic_key');
+  if(saved) document.getElementById('apiKeyInput').value=saved;
+  document.getElementById('pdbInput').addEventListener('keydown',e=>{if(e.key==='Enter')loadProtein()});
+  document.getElementById('searchInput').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch()});
+  document.getElementById('ppiGeneInput').addEventListener('keydown',e=>{if(e.key==='Enter')loadPPI()});
+  document.getElementById('aiPdbInput').addEventListener('keydown',e=>{if(e.key==='Enter')loadAiSummary()});
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('tab-'+t.dataset.tab).classList.add('active');
     });
+  });
+};
 
-    // OPTIONAL: fetch backend info
-    fetch(`http://localhost:8080/api/protein/${pdbId}`)
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById("info").innerHTML = `
-                <b>${data.title || pdbId}</b><br>
-                Method: ${data.method || "N/A"}<br>
-                Release: ${data.releaseDate || "N/A"}
-            `;
-        })
-        .catch(() => {
-            document.getElementById("info").innerText = "Info unavailable";
-        });
+function saveApiKey(v){try{sessionStorage.setItem('anthropic_key',v)}catch(e){}}
+function getApiKey(){return (document.getElementById('apiKeyInput').value||'').trim()||(sessionStorage.getItem('anthropic_key')||'')}
+
+// ═══ STATUS ══════════════════════════════════════════════════════════
+function setStatus(msg,type=''){document.getElementById('status-bar').className=type;document.getElementById('status-text').textContent=msg}
+
+// ═══ FEATURED ════════════════════════════════════════════════════════
+function renderFeatured(list){
+  document.getElementById('featured-grid').innerHTML=list.map(p=>
+    `<div class="featured-chip fade-in" onclick="loadProtein('${p.pdbId}')">
+      <div class="fid">${p.pdbId}</div><div class="ftitle">${p.title}</div>
+    </div>`).join('');
 }
 
-</script>
+// ═══ LOAD PROTEIN (metadata direct from RCSB) ════════════════════════
+function loadProtein(id){
+  const pdbId=(id||document.getElementById('pdbInput').value).trim().toUpperCase();
+  if(!pdbId||!viewer) return;
+  if(id) document.getElementById('pdbInput').value=id;
+  document.getElementById('viewer-wrap').style.display='block';
+  document.getElementById('ppi-full-panel').classList.remove('active');
+  currentPdb=pdbId;
+  document.getElementById('aiPdbInput').value=pdbId;
+  setStatus('loading '+pdbId+'…','loading');
+  viewer.clear(); clearMutationHighlight(false);
+  document.getElementById('info-card').innerHTML=
+    '<div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-family:var(--mono);font-size:9px">'+
+    '<div class="loader-ring" style="width:14px;height:14px;border-width:1.5px"></div> fetching metadata…</div>';
 
+  $3Dmol.download('pdb:'+pdbId,viewer,{},function(){
+    applyStyle();viewer.zoomTo();viewer.render();
+    document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('badge-id').textContent=pdbId;
+    document.getElementById('pdb-badge').classList.add('visible');
+    setStatus('loaded '+pdbId,'ok');
+  });
+  fetchRcsbMetadata(pdbId);
+}
+
+async function fetchRcsbMetadata(pdbId){
+  try{
+    const [entryRes,polyRes]=await Promise.allSettled([
+      fetch(`https://data.rcsb.org/rest/v1/core/entry/${pdbId}`),
+      fetch(`https://data.rcsb.org/rest/v1/core/polymer_entity/${pdbId}/1`)
+    ]);
+    let d={},pd={};
+    if(entryRes.status==='fulfilled'&&entryRes.value.ok) d=await entryRes.value.json();
+    if(polyRes.status==='fulfilled'&&polyRes.value.ok) pd=await polyRes.value.json();
+
+    const title=d.struct?.title||pdbId;
+    const method=d.exptl?.[0]?.method||'';
+    const releaseDate=d.rcsb_accession_info?.initial_release_date?.slice(0,10)||'';
+    const resolution=d.refine?.[0]?.ls_d_res_high?d.refine[0].ls_d_res_high.toFixed(2)+' Å':null;
+    const si=d.rcsb_entry_info||{};
+    const atomCount=si.deposited_atom_count||null;
+    const residueCount=si.deposited_polymer_monomer_count||null;
+    const organism=pd.rcsb_entity_source_organism?.[0]?.scientific_name||'';
+    const authors=(d.audit_author||[]).map(a=>a.name).filter(Boolean);
+
+    document.getElementById('badge-title').textContent=title.length>24?title.slice(0,24)+'…':title;
+    document.getElementById('info-card').innerHTML=
+      (organism?`<div class="org-badge">${organism}</div>`:'')+
+      `<div class="pname">${title}</div>`+
+      metaRow('PDB ID',pdbId)+metaRow('Method',method)+metaRow('Released',releaseDate)+
+      metaRow('Organism',organism)+metaRow('Resolution',resolution)+
+      metaRow('Atoms',atomCount?atomCount.toLocaleString():null)+
+      metaRow('Residues',residueCount?residueCount.toLocaleString():null)+
+      (authors.length?`<div class="authors">${authors.slice(0,4).join(', ')}${authors.length>4?'…':''}</div>`:'');
+    document.getElementById('info-card').classList.add('fade-in');
+  }catch(e){
+    document.getElementById('info-card').innerHTML=
+      `<div class="pname">${currentPdb}</div>
+       <div style="color:var(--warn);font-size:9px;font-family:var(--mono);margin-top:4px">Metadata error: ${e.message}</div>`;
+    document.getElementById('badge-title').textContent=currentPdb;
+  }
+}
+
+function metaRow(k,v){
+  if(v===null||v===undefined||v==='') return '';
+  return `<div class="meta"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+}
+
+// ═══ SEARCH (direct RCSB Search API) ═════════════════════════════════
+async function doSearch(){
+  const q=document.getElementById('searchInput').value.trim();
+  if(!q) return;
+  const el=document.getElementById('search-results');
+  el.innerHTML='<div class="empty-state"><div class="loader-ring" style="margin:0 auto"></div></div>';
+  setStatus('searching…','loading');
+  try{
+    const res=await fetch('https://search.rcsb.org/rcsbsearch/v2/query',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        query:{type:'terminal',service:'full_text',parameters:{value:q}},
+        return_type:'entry',
+        request_options:{paginate:{start:0,rows:20},sort:[{sort_by:'score',direction:'desc'}]}
+      })
+    });
+    if(!res.ok) throw new Error('RCSB search returned '+res.status);
+    const data=await res.json();
+    const hits=(data.result_set||[]).slice(0,20);
+    if(!hits.length){
+      el.innerHTML='<div class="empty-state"><div class="es-icon">🔍</div>no results for "'+q+'"</div>';
+      setStatus('no results','');return;
+    }
+    el.innerHTML=hits.map(h=>{
+      const id=h.identifier;
+      return `<div class="result-item fade-in" id="res-${id}" onclick="loadProtein('${id}')">
+        <div class="result-id">${id}</div>
+        <div class="result-title" id="title-${id}">loading title…</div>
+      </div>`;
+    }).join('');
+    setStatus(hits.length+' results for "'+q+'"','ok');
+    // Enrich titles asynchronously (first 10)
+    hits.slice(0,10).forEach(h=>{
+      fetch(`https://data.rcsb.org/rest/v1/core/entry/${h.identifier}`)
+        .then(r=>r.ok?r.json():null)
+        .then(d=>{const el=document.getElementById('title-'+h.identifier);if(el&&d?.struct?.title)el.textContent=d.struct.title})
+        .catch(()=>{const el=document.getElementById('title-'+h.identifier);if(el)el.textContent=h.identifier});
+    });
+    hits.slice(10).forEach(h=>{const el=document.getElementById('title-'+h.identifier);if(el)el.textContent=h.identifier});
+  }catch(e){
+    el.innerHTML=`<div class="empty-state"><div class="es-icon">⚠</div>Search failed: ${e.message}</div>`;
+    setStatus('search error','error');
+  }
+}
+
+// ═══ 3DMOL ═══════════════════════════════════════════════════════════
+function applyStyle(){
+  if(!viewer||!currentPdb) return;
+  viewer.setStyle({},{});
+  const co=currentColor==='spectrum'?{color:'spectrum'}:currentColor==='chain'?{colorscheme:'chainHetatm'}:currentColor==='residue'?{colorscheme:'amino'}:{color:currentColor};
+  if(currentStyle==='surface'){viewer.addSurface($3Dmol.SurfaceType.VDW,Object.assign({opacity:.75},co));}
+  else{const s={};s[currentStyle]=co;viewer.setStyle({},s);}
+  if(currentMutation) highlightMutationResidue(currentMutation.position,currentMutation.chain,false);
+  viewer.render();
+}
+function setStyle(s,btn){currentStyle=s;document.querySelectorAll('.style-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyStyle()}
+function setColor(c,btn){currentColor=c;document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyStyle()}
+function setBg(c){if(viewer){viewer.setBackgroundColor(c);viewer.render()}}
+function resetView(){if(viewer){viewer.zoomTo();viewer.render()}}
+function toggleSpin(){if(!viewer)return;spinning=!spinning;viewer.spin(spinning);document.getElementById('spin-btn').classList.toggle('on',spinning)}
+function takeScreenshot(){if(!viewer)return;const a=document.createElement('a');a.href=viewer.pngURI();a.download=(currentPdb||'protein')+'.png';a.click()}
+
+// ═══ AI SUMMARY (direct Anthropic API from browser) ══════════════════
+async function loadAiSummary(){
+  const pdbId=(document.getElementById('aiPdbInput').value||currentPdb||'').trim().toUpperCase();
+  if(!pdbId){alert('Enter or load a PDB ID first');return}
+  const apiKey=getApiKey();
+  if(!apiKey){
+    document.getElementById('ai-result').innerHTML=
+      '<div class="empty-state" style="margin-top:8px"><div class="es-icon">🔑</div>Paste your Anthropic API key above<br><span style="font-size:8px;color:var(--muted2)">Get one free at console.anthropic.com</span></div>';
+    return;
+  }
+  const resultEl=document.getElementById('ai-result');
+  resultEl.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px">
+    <div class="loader-ring" style="width:28px;height:28px;border-width:3px"></div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--muted)">Claude is analyzing ${pdbId}…</div>
+    <div style="font-size:9px;color:var(--muted2)">function · diseases · pathways · drugs</div></div>`;
+  document.getElementById('ai-tab-dot').classList.add('visible');
+  setStatus('AI analyzing '+pdbId+'…','loading');
+
+  let context='';
+  try{
+    const r=await fetch(`https://data.rcsb.org/rest/v1/core/entry/${pdbId}`);
+    if(r.ok){const d=await r.json();context=`Title: ${d.struct?.title||'Unknown'}\nMethod: ${d.exptl?.[0]?.method||'Unknown'}\nRelease: ${d.rcsb_accession_info?.initial_release_date?.slice(0,10)||'Unknown'}`}
+  }catch(e){}
+
+  const prompt=`You are a structural bioinformatics expert. Analyze protein with PDB ID: ${pdbId}\n${context}\n\nReturn ONLY a valid JSON object with NO markdown code fences, no explanation, just raw JSON:\n{"title":"official protein name","organism":"source organism","function":"2-3 sentence biological function description","diseaseRelevance":[{"disease":"disease name","role":"involvement","clinicalSignificance":"high|medium|low"}],"pathways":[{"name":"pathway name","database":"KEGG|Reactome|WikiPathways","role":"protein role"}],"drugTargets":[{"drug":"drug name","status":"approved|clinical_trial|experimental","mechanism":"mechanism"}],"keyResidues":[{"position":123,"residue":"HIS","role":"catalytic|binding|structural"}],"structuralFeatures":"notable structural features","confidence":"high|medium|low"}`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      throw new Error(err.error?.message||'API error '+res.status);
+    }
+    const data=await res.json();
+    let text=(data.content?.[0]?.text||'').trim();
+    // Strip any accidental markdown
+    text=text.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'').trim();
+    // Find the JSON object
+    const start=text.indexOf('{'),end=text.lastIndexOf('}');
+    if(start>=0&&end>start) text=text.slice(start,end+1);
+    renderAiSummary(JSON.parse(text));
+    setStatus('AI summary ready','ok');
+  }catch(e){
+    const isAuth=e.message.includes('401')||e.message.includes('authentication');
+    const isBusy=e.message.includes('529')||e.message.includes('overloaded');
+    resultEl.innerHTML=`<div class="empty-state" style="margin-top:8px"><div class="es-icon">⚠</div>
+      ${isAuth?'Invalid API key — double-check and retry':isBusy?'Claude is busy right now, please try again in a moment':e.message}
+    </div>`;
+    setStatus('AI error','error');
+  }
+}
+
+function renderAiSummary(d){
+  const el=document.getElementById('ai-result');
+  let h=`<div class="ai-section fade-in" style="background:rgba(181,123,255,.06);border-color:rgba(181,123,255,.2);margin-top:8px">
+    <div class="ai-section-title"><span class="ai-icon">🧬</span>${d.title||'Protein Analysis'}</div>
+    ${d.organism?`<div style="font-family:var(--mono);font-size:8px;color:var(--accent);margin-bottom:8px">${d.organism}</div>`:''}
+    <div class="ai-text">${d.function||'Function not available.'}</div>
+    ${d.structuralFeatures?`<div style="font-size:10px;color:var(--muted);margin-top:6px;font-style:italic">${d.structuralFeatures}</div>`:''}
+    <div class="confidence-bar"><div class="confidence-fill ${d.confidence||'low'}"></div></div>
+    <div style="font-family:var(--mono);font-size:7px;color:var(--muted2);margin-top:3px;display:flex;justify-content:space-between">
+      <span>CONFIDENCE: ${(d.confidence||'LOW').toUpperCase()}</span><span>claude-sonnet-4-6</span></div></div>`;
+
+  if(d.diseaseRelevance?.length){
+    h+=`<div class="ai-section fade-in"><div class="ai-section-title"><span class="ai-icon">🩺</span>Disease Relevance</div>`;
+    d.diseaseRelevance.forEach(r=>{h+=`<div class="disease-card"><div class="disease-name">${r.disease||'—'}</div><div class="disease-role">${r.role||''}</div><span class="sig-badge ${r.clinicalSignificance||'low'}">${(r.clinicalSignificance||'low').toUpperCase()}</span></div>`});
+    h+='</div>';
+  }
+  if(d.pathways?.length){
+    h+=`<div class="ai-section fade-in"><div class="ai-section-title"><span class="ai-icon">🔀</span>Pathway Involvement</div>`;
+    d.pathways.forEach(p=>{h+=`<div class="pathway-item"><span class="pathway-db">${p.database||'DB'}</span><div><div class="pathway-name">${p.name||'—'}</div><div class="pathway-role">${p.role||''}</div></div></div>`});
+    h+='</div>';
+  }
+  if(d.drugTargets?.length){
+    h+=`<div class="ai-section fade-in"><div class="ai-section-title"><span class="ai-icon">💊</span>Drug Targets</div>`;
+    d.drugTargets.forEach(t=>{const sc=(t.status||'').replace(/ /g,'_').toLowerCase();h+=`<div class="drug-card"><div class="drug-name">${t.drug||'—'}</div><span class="drug-status ${sc}">${(t.status||'—').replace(/_/g,' ').toUpperCase()}</span><div class="drug-mechanism">${t.mechanism||''}</div></div>`});
+    h+='</div>';
+  }
+  if(d.keyResidues?.length){
+    h+=`<div class="ai-section fade-in"><div class="ai-section-title"><span class="ai-icon">📍</span>Key Residues</div><div style="display:flex;flex-wrap:wrap;gap:5px">`;
+    d.keyResidues.forEach(r=>{const col=r.role==='catalytic'?'var(--accent3)':r.role==='binding'?'var(--accent2)':'var(--muted)';h+=`<span style="font-family:var(--mono);font-size:8px;padding:2px 7px;border-radius:3px;border:1px solid ${col};color:${col};background:${col}18;cursor:pointer" onclick="highlightResidueFromAI(${r.position},'A')" title="${r.role}">${r.residue}${r.position}</span>`});
+    h+='</div></div>';
+  }
+  el.innerHTML=h||'<div class="empty-state"><div class="es-icon">🤔</div>No data returned</div>';
+}
+
+// ═══ MUTATION ════════════════════════════════════════════════════════
+function buildAaPickers(){
+  ['wt','mt'].forEach(type=>{
+    const picker=document.getElementById('aa-picker-'+type);
+    AA_LIST.forEach(aa=>{
+      const btn=document.createElement('div');
+      btn.className='aa-btn';btn.id='aa-'+type+'-'+aa;btn.title=AA_NAMES[aa]||aa;btn.textContent=aa;
+      btn.onclick=()=>{document.getElementById('mut'+(type==='wt'?'Wt':'Mt')).value=aa;syncAaPicker(type,aa)};
+      picker.appendChild(btn);
+    });
+  });
+}
+function syncAaPicker(type,val){
+  const cls=type==='wt'?'selected-wt':'selected-mt';
+  document.querySelectorAll('#aa-picker-'+type+' .aa-btn').forEach(b=>b.classList.remove(cls));
+  const t=document.getElementById('aa-'+type+'-'+val);if(t)t.classList.add(cls);
+}
+
+async function analyzeMutation(){
+  const wt=document.getElementById('mutWt').value.trim().toUpperCase();
+  const mt=document.getElementById('mutMt').value.trim().toUpperCase();
+  const pos=parseInt(document.getElementById('mutPos').value);
+  const chain=document.getElementById('mutChain').value.trim().toUpperCase()||'A';
+  if(!wt||!mt||!pos){alert('Fill in Wild-Type AA, Mutant AA, and Position');return}
+  if(!currentPdb){alert('Load a protein structure first');return}
+
+  const resultEl=document.getElementById('mutation-result');
+  resultEl.innerHTML='<div class="empty-state"><div class="loader-ring" style="width:22px;height:22px;border-width:2px"></div><div>Analyzing '+wt+pos+mt+'…</div></div>';
+  setStatus('analyzing '+wt+pos+mt+'…','loading');
+  highlightMutationResidue(pos,chain,true);
+
+  const b=computeBlosum62(wt,mt);
+  let aiPred={effect:b>=2?'likely_benign':b>=0?'uncertain':b>=-2?'likely_pathogenic':'pathogenic',
+    confidence:'low',mechanismOfEffect:`BLOSUM62 score: ${b}. ${getApiKey()?'':'Add API key in AI tab for detailed analysis.'}`,source:'blosum62-local'};
+
+  const apiKey=getApiKey();
+  if(apiKey){
+    try{
+      const wtP=AA_PROPS[wt]||{},mtP=AA_PROPS[mt]||{};
+      const prompt=`Analyze point mutation ${wt}${pos}${mt} in PDB ${currentPdb} chain ${chain}.\nWT ${AA_NAMES[wt]||wt}: charge=${wtP.charge}, polarity=${wtP.polarity}, size=${wtP.size}\nMutant ${AA_NAMES[mt]||mt}: charge=${mtP.charge}, polarity=${mtP.polarity}, size=${mtP.size}\nBLOSUM62: ${b}\nReturn ONLY JSON (no fences): {"effect":"benign|likely_benign|uncertain|likely_pathogenic|pathogenic","confidence":"high|medium|low","mechanismOfEffect":"brief impact","structuralImpact":"structure change","functionalImpact":"function effect","clinicalNote":"clinical significance or empty","recommendations":["follow-up 1"]}`;
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,messages:[{role:'user',content:prompt}]})
+      });
+      if(res.ok){
+        const dd=await res.json();
+        let text=(dd.content?.[0]?.text||'').trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'').trim();
+        const s=text.indexOf('{'),e=text.lastIndexOf('}');
+        if(s>=0&&e>s) text=text.slice(s,e+1);
+        aiPred=Object.assign(JSON.parse(text),{source:'claude-sonnet-4-6'});
+      }
+    }catch(e){aiPred.mechanismOfEffect=`AI error: ${e.message}. BLOSUM62: ${b}.`}
+  }
+
+  const result={pdbId:currentPdb,position:pos,wildType:wt,mutant:mt,notation:wt+pos+mt,chain,
+    wildTypeProperties:AA_PROPS[wt]||{},mutantProperties:AA_PROPS[mt]||{},
+    propertyChanges:computePropertyChanges(wt,mt),
+    databasePrediction:{blosum62Score:b,conservationClass:classifyConservation(wt,mt)},
+    aiPrediction:aiPred,severity:Math.max(0,Math.min(1,0.5-b*0.08))};
+  currentMutation=result;
+  renderMutationResult(result);
+  setStatus('mutation analyzed: '+wt+pos+mt,'ok');
+}
+
+function computeBlosum62(wt,mt){
+  if(wt===mt) return 4;
+  const sc={'A_G':0,'A_S':1,'R_K':2,'R_Q':1,'N_D':1,'N_S':1,'D_E':2,'D_N':1,'Q_E':2,'Q_K':1,
+    'E_D':2,'E_Q':2,'I_V':3,'I_L':1,'L_I':1,'L_V':1,'L_M':2,'K_R':2,'K_Q':1,'M_L':2,'M_I':1,
+    'F_Y':3,'F_W':1,'S_T':1,'T_S':1,'W_Y':2,'Y_F':3,'Y_W':2,'V_I':3,'V_L':1,'H_Y':2,'H_R':0};
+  return sc[wt+'_'+mt]||sc[mt+'_'+wt]||-3;
+}
+function classifyConservation(wt,mt){const s=computeBlosum62(wt,mt);return s>=2?'conservative':s>=0?'semi-conservative':s>=-2?'non-conservative':'highly-disruptive'}
+function computePropertyChanges(wt,mt){
+  const wp=AA_PROPS[wt]||{},mp=AA_PROPS[mt]||{};
+  return ['charge','polarity','size','hydrophobicity'].filter(p=>wp[p]&&mp[p]&&wp[p]!==mp[p]).map(p=>({property:p,from:wp[p],to:mp[p]}));
+}
+
+function renderMutationResult(data){
+  const el=document.getElementById('mutation-result');
+  const ai=data.aiPrediction||{},db=data.databasePrediction||{};
+  const effect=ai.effect||'uncertain',sev=Math.round((data.severity||.5)*100);
+  const b=db.blosum62Score||0,bc=b>0?'pos':b<0?'neg':'zero';
+  const wtp=data.wildTypeProperties||{},mtp=data.mutantProperties||{};
+  el.innerHTML=`
+  <div class="mut-comparison" style="margin-top:10px">
+    <div class="mut-aa-card wt-card">
+      <div class="mut-aa-label">Wild-Type</div>
+      <div class="mut-aa-code">${data.wildType}</div>
+      <div class="mut-aa-name">${AA_NAMES[data.wildType]||data.wildType}</div>
+      <div style="margin-top:6px;font-family:var(--mono);font-size:7px;color:var(--muted);line-height:1.8">
+        ${wtp.charge?'charge: '+wtp.charge+'<br>':''}${wtp.polarity?'polarity: '+wtp.polarity+'<br>':''}${wtp.size?'size: '+wtp.size:''}
+      </div>
+    </div>
+    <div style="text-align:center">
+      <div class="mut-arrow">→</div>
+      <div class="mut-notation">${data.notation}</div>
+      <div style="font-family:var(--mono);font-size:7px;color:var(--muted);margin-top:4px">pos ${data.position} · chain ${data.chain}</div>
+    </div>
+    <div class="mut-aa-card mt-card">
+      <div class="mut-aa-label">Mutant</div>
+      <div class="mut-aa-code">${data.mutant}</div>
+      <div class="mut-aa-name">${AA_NAMES[data.mutant]||data.mutant}</div>
+      <div style="margin-top:6px;font-family:var(--mono);font-size:7px;color:var(--muted);line-height:1.8">
+        ${mtp.charge?'charge: '+mtp.charge+'<br>':''}${mtp.polarity?'polarity: '+mtp.polarity+'<br>':''}${mtp.size?'size: '+mtp.size:''}
+      </div>
+    </div>
+  </div>
+  <div style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-family:var(--mono);font-size:8px;color:var(--muted)">PREDICTED SEVERITY</span>
+      <span class="effect-badge ${effect}">${effect.replace('_',' ').toUpperCase()}</span>
+    </div>
+    <div class="severity-meter"><div class="severity-fill" style="width:${sev}%"></div></div>
+    <div class="severity-labels"><span>Benign</span><span>Uncertain</span><span>Pathogenic</span></div>
+  </div>
+  ${data.propertyChanges?.length?`<div class="ai-section" style="margin-bottom:8px">
+    <div class="ai-section-title"><span class="ai-icon">⚖️</span>Property Changes</div>
+    ${data.propertyChanges.map(c=>`<div class="prop-change-row"><span class="prop-name">${c.property}</span><span class="prop-from">${c.from}</span><span class="prop-arr"> → </span><span class="prop-to">${c.to}</span></div>`).join('')}
+  </div>`:''}
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+    <span class="blosum-chip">BLOSUM62 <span class="bv ${bc}">${b>=0?'+':''}${b}</span></span>
+    <span class="blosum-chip">Conservation: <span class="bv">${db.conservationClass||'—'}</span></span>
+  </div>
+  ${ai.mechanismOfEffect?`<div class="ai-section" style="margin-bottom:8px">
+    <div class="ai-section-title"><span class="ai-icon">🤖</span>AI Prediction <span style="font-size:7px;color:var(--muted2);text-transform:none;letter-spacing:0">(${ai.source||'—'})</span></div>
+    <div class="ai-text" style="margin-bottom:6px">${ai.mechanismOfEffect}</div>
+    ${ai.structuralImpact?`<div style="font-size:10px;color:var(--muted);margin-bottom:4px"><strong style="color:var(--accent2)">Structural:</strong> ${ai.structuralImpact}</div>`:''}
+    ${ai.functionalImpact?`<div style="font-size:10px;color:var(--muted);margin-bottom:4px"><strong style="color:var(--accent3)">Functional:</strong> ${ai.functionalImpact}</div>`:''}
+    ${ai.clinicalNote?`<div style="font-size:10px;color:var(--gold);margin-top:4px">⚠ ${ai.clinicalNote}</div>`:''}
+  </div>`:''}
+  ${ai.recommendations?.length?`<div class="ai-section" style="margin-bottom:8px">
+    <div class="ai-section-title"><span class="ai-icon">📋</span>Recommended Follow-up</div>
+    ${ai.recommendations.map(r=>'<div style="font-size:10px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border)">• '+r+'</div>').join('')}
+  </div>`:''}
+  <button class="btn secondary" style="width:100%;margin-top:4px;font-size:9px" onclick="focusMutationInViewer(${data.position},'${data.chain}')">⬡ Focus Mutation Site in 3D Viewer</button>`;
+}
+
+// ═══ MUTATION 3D HIGHLIGHTING ═════════════════════════════════════════
+function highlightMutationResidue(position,chain,zoom){
+  if(!viewer)return;chain=chain||'A';
+  viewer.setStyle({},{});
+  const co=currentColor==='spectrum'?{color:'spectrum'}:currentColor==='chain'?{colorscheme:'chainHetatm'}:currentColor==='residue'?{colorscheme:'amino'}:{color:currentColor};
+  if(currentStyle!=='surface'){const s={};s[currentStyle]=Object.assign({opacity:.55},co);viewer.setStyle({},s)}
+  viewer.setStyle({resi:position,chain},{sphere:{color:'#ff5e8a',radius:1.4}});
+  viewer.addLabel(String(position),{position:{resi:position,chain},backgroundColor:'rgba(255,94,138,.85)',fontColor:'white',fontSize:10,borderColor:'#ff5e8a',borderThickness:1,padding:2});
+  if(zoom)viewer.zoomTo({resi:position,chain},1500);
+  viewer.render();
+  document.getElementById('mutation-badge').classList.add('visible');
+  const wt=document.getElementById('mutWt').value||'?',mt=document.getElementById('mutMt').value||'?';
+  document.getElementById('mutation-badge-text').textContent=wt+position+mt+' · chain '+chain;
+}
+function focusMutationInViewer(pos,chain){
+  if(!viewer)return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='explore'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-explore').classList.add('active');
+  highlightMutationResidue(pos,chain,true);
+}
+function highlightResidueFromAI(pos,chain){if(!viewer)return;viewer.setStyle({resi:pos,chain:chain||'A'},{sphere:{color:'#b57bff',radius:1.2}});viewer.zoomTo({resi:pos,chain:chain||'A'},1200);viewer.render()}
+function clearMutationHighlight(rerender=true){
+  if(!viewer)return;viewer.removeAllLabels();
+  document.getElementById('mutation-badge').classList.remove('visible');
+  if(rerender)applyStyle();
+}
+
+// ═══ PPI ═════════════════════════════════════════════════════════════
+async function loadPPI(){
+  const gene=document.getElementById('ppiGeneInput').value.trim().toUpperCase();
+  if(!gene)return;
+  const organism=document.getElementById('ppiOrganism').value;
+  const limit=parseInt(document.getElementById('ppiLimit').value);
+  const scoreThreshold=parseInt(document.getElementById('ppiScore').value);
+  document.getElementById('ppi-empty').style.display='none';
+  document.getElementById('ppi-loading').style.display='flex';
+  document.getElementById('ppi-info-bar').style.display='none';
+  document.getElementById('ppi-legend').style.display='none';
+  document.getElementById('ppi-tab-dot').classList.add('visible');
+  setStatus('fetching PPI for '+gene+'…','loading');
+  try{
+    const rRes=await fetch(`https://string-db.org/api/json/get_string_ids?identifiers=${gene}&species=${organism}&limit=1&caller_identity=proteinviz`);
+    if(!rRes.ok)throw new Error('resolve fail');
+    const resolved=await rRes.json();
+    if(!resolved.length)throw new Error('Gene "'+gene+'" not found in STRING');
+    const stringId=resolved[0].stringId,resolvedGene=resolved[0].preferredName||gene;
+    const nRes=await fetch(`https://string-db.org/api/json/network?identifiers=${stringId}&species=${organism}&limit=${limit}&required_score=${scoreThreshold}&caller_identity=proteinviz`);
+    if(!nRes.ok)throw new Error('network fail');
+    const interactions=await nRes.json();
+    if(!interactions.length)throw new Error('No interactions found above score threshold');
+    ppiData=processStringData(interactions,resolvedGene,stringId,organism);
+    renderMiniPPI(ppiData);
+    document.getElementById('ppi-node-count').textContent=ppiData.nodes.length;
+    document.getElementById('ppi-edge-count').textContent=ppiData.edges.length;
+    document.getElementById('ppi-gene-name').textContent=resolvedGene;
+    document.getElementById('ppi-info-bar').style.display='flex';
+    document.getElementById('ppi-legend').style.display='flex';
+    setStatus('PPI: '+resolvedGene+' ('+ppiData.nodes.length+' proteins)','ok');
+  }catch(e){
+    document.getElementById('ppi-loading').style.display='none';
+    document.getElementById('ppi-empty').style.display='flex';
+    document.getElementById('ppi-empty').querySelector('.pe-text').textContent='Error: '+e.message;
+    setStatus('PPI error','error');
+  }
+}
+function processStringData(interactions,queryGene){
+  const nodeMap=new Map(),edges=[];
+  interactions.forEach(link=>{
+    const a=link.preferredName_A||link.stringId_A,b=link.preferredName_B||link.stringId_B,score=link.score||0;
+    if(!nodeMap.has(a))nodeMap.set(a,{id:a,isQuery:a.toUpperCase()===queryGene.toUpperCase(),degree:0});
+    if(!nodeMap.has(b))nodeMap.set(b,{id:b,isQuery:b.toUpperCase()===queryGene.toUpperCase(),degree:0});
+    nodeMap.get(a).degree++;nodeMap.get(b).degree++;edges.push({source:a,target:b,score});
+  });
+  if(!nodeMap.has(queryGene))nodeMap.set(queryGene,{id:queryGene,isQuery:true,degree:0});
+  else nodeMap.get(queryGene).isQuery=true;
+  return{gene:queryGene,nodes:Array.from(nodeMap.values()),edges};
+}
+function renderMiniPPI(data){
+  document.getElementById('ppi-loading').style.display='none';
+  const svg=d3.select('#ppi-svg-mini');svg.selectAll('*').remove();
+  const wrap=document.getElementById('ppi-canvas-wrap'),W=wrap.clientWidth,H=wrap.clientHeight;
+  svg.attr('viewBox',`0 0 ${W} ${H}`);
+  const sim=d3.forceSimulation(data.nodes).force('link',d3.forceLink(data.edges).id(d=>d.id).distance(50).strength(.4))
+    .force('charge',d3.forceManyBody().strength(-80)).force('center',d3.forceCenter(W/2,H/2)).force('collision',d3.forceCollide(14));
+  const link=svg.append('g').selectAll('line').data(data.edges).join('line')
+    .attr('stroke',d=>d.score>=700?'var(--accent)':d.score>=400?'var(--accent2)':'var(--muted2)').attr('stroke-width',d=>d.score>=700?1.5:1).attr('stroke-opacity',.6);
+  const node=svg.append('g').selectAll('circle').data(data.nodes).join('circle')
+    .attr('r',d=>d.isQuery?10:Math.max(4,3+d.degree*.5)).attr('fill',d=>d.isQuery?'var(--accent3)':d.degree>=3?'var(--accent2)':'var(--muted)')
+    .attr('stroke',d=>d.isQuery?'rgba(255,94,138,.6)':'var(--border2)').attr('stroke-width',d=>d.isQuery?2:1).style('cursor','pointer')
+    .on('click',(evt,d)=>loadPPI_from(d.id))
+    .on('mouseover',(evt,d)=>{const tt=document.getElementById('ppi-tooltip');tt.textContent=d.id+(d.isQuery?' (query)':'')+' · '+d.degree+' links';tt.style.left=(evt.offsetX+10)+'px';tt.style.top=(evt.offsetY-10)+'px';tt.classList.add('visible')})
+    .on('mouseout',()=>document.getElementById('ppi-tooltip').classList.remove('visible'));
+  sim.on('tick',()=>{link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);node.attr('cx',d=>d.x).attr('cy',d=>d.y)});
+  sim.alpha(.8).restart();setTimeout(()=>sim.stop(),4000);
+}
+function expandPPI(){
+  if(!ppiData)return;
+  document.getElementById('viewer-wrap').style.display='none';
+  document.getElementById('ppi-full-panel').classList.add('active');
+  document.getElementById('ppi-full-gene').textContent=ppiData.gene;
+  document.getElementById('ppi-full-badge').textContent=ppiData.nodes.length+' nodes · '+ppiData.edges.length+' edges';
+  renderFullPPI(ppiData);
+}
+function renderFullPPI(data){
+  const svg=d3.select('#ppi-svg-full');svg.selectAll('*').remove();
+  const canvas=document.getElementById('ppi-full-canvas'),W=canvas.clientWidth,H=canvas.clientHeight;
+  svg.attr('viewBox',`0 0 ${W} ${H}`).call(d3.zoom().on('zoom',e=>svg.select('g.main').attr('transform',e.transform)));
+  const g=svg.append('g').attr('class','main');
+  const avgScore=data.edges.length?Math.round(data.edges.reduce((s,e)=>s+e.score,0)/data.edges.length):0;
+  document.getElementById('full-node-count').textContent=data.nodes.length;
+  document.getElementById('full-edge-count').textContent=data.edges.length;
+  document.getElementById('full-avg-score').textContent=avgScore;
+  fullSimulation=d3.forceSimulation(data.nodes).force('link',d3.forceLink(data.edges).id(d=>d.id).distance(90).strength(.3))
+    .force('charge',d3.forceManyBody().strength(-200)).force('center',d3.forceCenter(W/2,H/2)).force('collision',d3.forceCollide(d=>nodeRadius(d)+6));
+  const link=g.append('g').selectAll('line').data(data.edges).join('line')
+    .attr('stroke',d=>d.score>=700?'var(--accent)':d.score>=400?'var(--accent2)':'var(--muted2)').attr('stroke-width',d=>d.score>=700?2:d.score>=400?1.5:1).attr('stroke-opacity',.5);
+  const drag=d3.drag().on('start',(evt,d)=>{if(!evt.active)fullSimulation.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y})
+    .on('drag',(evt,d)=>{d.fx=evt.x;d.fy=evt.y}).on('end',(evt,d)=>{if(!evt.active)fullSimulation.alphaTarget(0);d.fx=null;d.fy=null});
+  const node=g.append('g').selectAll('g.node').data(data.nodes).join('g').attr('class','node').call(drag).style('cursor','pointer')
+    .on('click',(evt,d)=>loadPPI_from(d.id))
+    .on('mouseover',(evt,d)=>{const tt=document.getElementById('ppi-full-tooltip');tt.innerHTML=`<strong style="color:${d.isQuery?'var(--accent3)':'var(--accent2)'}">${d.id}</strong><br>Connections: ${d.degree}${d.isQuery?'<br>(Query)':''}`;const r=canvas.getBoundingClientRect();tt.style.left=(evt.clientX-r.left+12)+'px';tt.style.top=(evt.clientY-r.top-30)+'px';tt.classList.add('visible')})
+    .on('mouseout',()=>document.getElementById('ppi-full-tooltip').classList.remove('visible'));
+  node.append('circle').attr('r',nodeRadius).attr('fill',d=>d.isQuery?'var(--accent3)':d.degree>=4?'var(--accent2)':'var(--muted)').attr('fill-opacity',.85).attr('stroke',d=>d.isQuery?'rgba(255,94,138,.7)':'rgba(255,255,255,.1)').attr('stroke-width',d=>d.isQuery?2.5:1);
+  node.append('text').attr('text-anchor','middle').attr('dy',d=>nodeRadius(d)+10).attr('font-family',"'Syne Mono',monospace").attr('font-size',8).attr('fill','var(--muted)').text(d=>d.id);
+  fullSimulation.on('tick',()=>{link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);node.attr('transform',d=>`translate(${d.x},${d.y})`)});
+}
+function nodeRadius(d){return d.isQuery?14:Math.max(6,5+d.degree*.8)}
+function loadPPI_from(gene){document.getElementById('ppi-full-tooltip').classList.remove('visible');document.getElementById('ppiGeneInput').value=gene;closePPI();document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='ppi'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));document.getElementById('tab-ppi').classList.add('active');loadPPI()}
+function resetFullLayout(){if(fullSimulation)fullSimulation.alpha(.5).restart()}
+function toggleLabels(){showLabels=!showLabels;d3.selectAll('#ppi-svg-full text').style('display',showLabels?null:'none');document.getElementById('label-btn').classList.toggle('on',showLabels)}
+function ppiScreenshot(){const svgEl=document.getElementById('ppi-svg-full');const src='<?xml version="1.0" standalone="no"?>\r\n'+new XMLSerializer().serializeToString(svgEl);const a=document.createElement('a');a.href='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(src);a.download=(ppiData?ppiData.gene:'ppi')+'_network.svg';a.click()}
+function closePPI(){document.getElementById('viewer-wrap').style.display='block';document.getElementById('ppi-full-panel').classList.remove('active')}
+</script>
 </body>
 </html>

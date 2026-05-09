@@ -1,13 +1,7 @@
-# Java / Maven
-target/
-*.class
-*.jar
-
-# OS
+node_modules
+.env
+target
+build
+dist
+.idea
 .DS_Store
-
-# Node (just in case later)
-node_modules/
-
-# Logs
-*.log
