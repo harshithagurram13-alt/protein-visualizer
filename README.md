@@ -8,7 +8,7 @@
 
 ## What It Does
 
-ProteinViz is a browser-based tool for exploring protein structures from the RCSB Protein Data Bank. It works entirely from a single HTML file — no backend required for core features. The optional Java/Spring Boot backend adds caching and server-side API calls.
+ProteinViz is a browser-based tool for exploring protein structures from the RCSB Protein Data Bank. It works entirely from a single HTML file. The optional Java/Spring Boot backend adds caching and server-side API calls.
 
 **Core features:**
 
